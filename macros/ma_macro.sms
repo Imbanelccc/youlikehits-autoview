@@ -1,0 +1,20 @@
+[Super Macro Script]
+; ============================================================================
+;  ma_macro - gagne des points automatiquement sur YouLikeHits
+;             (YouTube Views) - profil Chrome "Livre" (Profile 2)
+; ----------------------------------------------------------------------------
+;  Lance le moteur autoview\ylh-autoview.ps1 qui :
+;    1. ouvre Chrome (profil Livre) sur la page YouTube Views,
+;    2. clique le bouton "View",
+;    3. ferme la fenetre YouTube 5 s apres (le minuteur tourne sur l'onglet),
+;    4. attend le credit des points (jusqu'a 140 s),
+;    5. recharge la liste et recommence (30 videos).
+;
+;  TIMER : l'ordinateur s'eteint 1 heure APRES LE LANCEMENT.
+;  Pour annuler : invite de commandes -> shutdown /a
+;
+;  IMPORTANT : le chemin de powershell.exe ne doit PAS etre entre guillemets.
+;  Les guillemets restent corrects DANS les arguments.
+; ============================================================================
+Execute;C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe;-NoProfile -ExecutionPolicy Bypass -File "C:\Users\everb\Documents\Macros\autoview\ylh-autoview.ps1" -Cycles 30 -StartWatch 5 -MaxWatch 140 -EteindreOrdinateur
+Quitter

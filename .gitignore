@@ -1,0 +1,8 @@
+# Journaux et sauvegardes locales
+*.log
+*.bak
+*.tmp
+
+# Divers Windows
+Thumbs.db
+desktop.ini
