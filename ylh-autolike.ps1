@@ -32,7 +32,9 @@
 
 param(
     [int]$Cycles = 30,
-    [int]$MaxWait = 45,
+    [int]$MaxWait = 120,
+    [int]$ConfirmDelay = 15,
+    [int]$PostLikeWait = 10,
     [string]$Profile = 'Profile 2',
     [string]$Url = 'https://www.youlikehits.com/favtweets.php',
     [switch]$EteindreOrdinateur,
@@ -72,6 +74,19 @@ public class LikeNative {
     }
 }
 "@
+
+# Message d'erreur du site quand le like n'est pas encore visible cote Twitter.
+function Test-ConfirmError($doc) {
+    if (-not $doc) { return $false }
+    try {
+        $all = $doc.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+        foreach ($e in $all) {
+            $n = ($e.Current.Name -replace '\s+', ' ').Trim()
+            if ($n -match "didn't find this Like|did not find this Like|Uh Oh") { return $true }
+        }
+    } catch {}
+    return $false
+}
 
 # ------------------------------------------------------------------ helpers
 function Get-ChromeWindows {
@@ -387,44 +402,70 @@ for ($i = 1; $i -le $Cycles; $i++) {
         }
     }
 
+    if ($liked) {
+        # laisser X enregistrer le like cote serveur avant de fermer le popup
+        Log "Attente de $PostLikeWait s pour que X enregistre le like..."
+        Start-Sleep -Seconds $PostLikeWait
+    }
+
     Close-Window $xwin | Out-Null
     Start-Sleep -Seconds 1
 
     # retour sur YouLikeHits : c'est ICI que le credit se declenche
     Activate-Window $win | Out-Null
-    Start-Sleep -Seconds 2
 
-    # clic sur la confirmation "V I Liked"
-    $claim = $null
-    for ($t = 0; $t -lt 10 -and -not $claim; $t++) {
-        $claim = Find-YlhLinkMatch (Get-Doc $win) 'I Liked'
-        if (-not $claim) { Start-Sleep -Seconds 1 }
-    }
+    # laisser a Twitter le temps de propager le like (sinon : "Uh Oh, we
+    # didn't find this Like on your Twitter account")
+    Log "Attente de $ConfirmDelay s avant la confirmation (propagation Twitter)..."
+    Start-Sleep -Seconds $ConfirmDelay
+    Activate-Window $win | Out-Null
 
-    if (-not $claim) {
-        Log "Lien de confirmation 'I Liked' introuvable."
-        $failures++
-        Invoke-Reload $win | Out-Null
-        Start-Sleep -Seconds 6
-        if ($failures -ge 3) { Log "3 echecs : arret."; break }
-        continue
-    }
-
-    Log "Clic confirmation a ($(Invoke-ByMouse $claim))"
-
-    # attendre le message "You got N Points for Liking ..."
     $credited = $false
-    $waited = 0
-    while ($waited -lt $MaxWait) {
-        Start-Sleep -Seconds 2
-        $waited += 2
-        $doc = Get-Doc $win
-        $info = Get-CreditInfo $doc
-        if ($info) {
-            Log "CREDIT : $($info.Text)"
-            $credited = $true
-            $total += $info.Amount
+    $waited   = 0
+    $try      = 0
+
+    while ($waited -lt $MaxWait -and -not $credited -and $try -lt 3) {
+        $claim = $null
+        for ($t = 0; $t -lt 5 -and -not $claim; $t++) {
+            $claim = Find-YlhLinkMatch (Get-Doc $win) 'I Liked'
+            if (-not $claim) { Start-Sleep -Seconds 1; $waited++ }
+        }
+
+        if (-not $claim) {
+            Log "Lien de confirmation 'I Liked' introuvable."
             break
+        }
+
+        $try++
+        Log "Clic confirmation a ($(Invoke-ByMouse $claim)) [essai $try]"
+
+        $sinceClick = 0
+        $errorSeen  = $false
+        while ($sinceClick -lt 30 -and -not $credited) {
+            Start-Sleep -Seconds 2
+            $sinceClick += 2
+            $waited += 2
+            $doc = Get-Doc $win
+
+            $info = Get-CreditInfo $doc
+            if ($info) {
+                Log "CREDIT : $($info.Text)"
+                $credited = $true
+                $total += $info.Amount
+                break
+            }
+
+            if (Test-ConfirmError $doc) {
+                $errorSeen = $true
+                Log "Uh Oh : le site ne voit pas encore le like. On patiente et on reessaie."
+                break
+            }
+        }
+
+        if (-not $credited -and $errorSeen) {
+            Start-Sleep -Seconds 25
+            $waited += 25
+            Activate-Window $win | Out-Null
         }
     }
 
@@ -432,7 +473,7 @@ for ($i = 1; $i -le $Cycles; $i++) {
         $done++
         $failures = 0
     } else {
-        Log "Message de credit non vu apres $MaxWait s."
+        Log "Message de credit non vu apres $waited s."
         # verification apres rechargement
         Invoke-Reload $win | Out-Null
         Start-Sleep -Seconds 8
@@ -442,6 +483,10 @@ for ($i = 1; $i -le $Cycles; $i++) {
             $done++
             $failures = 0
         } else {
+            Log "Toujours rien : tweet passe (Skip)."
+            Activate-Window $win | Out-Null
+            $skip = Find-YlhLinkMatch (Get-Doc $win) '^Skip$'
+            if ($skip) { Log "Clic Skip a ($(Invoke-ByMouse $skip))" }
             $failures++
         }
     }

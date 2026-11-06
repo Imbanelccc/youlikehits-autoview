@@ -167,7 +167,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\ylh-autolike.ps1 -Cycles 3
 | Paramètre | Défaut | Rôle |
 |---|---|---|
 | `-Cycles` | `30` | Nombre de tweets à traiter |
-| `-MaxWait` | `45` | Attente maxi du message de crédit (secondes) |
+| `-MaxWait` | `120` | Attente maxi du crédit, réessais compris (secondes) |
+| `-ConfirmDelay` | `15` | Attente avant « I Liked » (propagation du like par Twitter) |
 | `-Profile` | `Profile 2` | Dossier du profil Chrome (« Livre ») |
 | `-Url` | `.../favtweets.php` | Page cible |
 | `-EteindreOrdinateur` | *(off)* | Arrêt de Windows 1 h après le lancement |
@@ -221,6 +222,7 @@ problème.
 |---|---|---|
 | « Le popup X ne s'est pas ouvert » | Pop-up bloquée | Autoriser les pop-ups pour `youlikehits.com` (icône à droite de la barre d'adresse → Toujours autoriser) |
 | Le like est fait mais 0 point | Le clic « I Liked » n'a pas eu lieu | Vérifier le journal : ligne `Clic confirmation` puis `CREDIT :` |
+| « Uh Oh — We didn't find this Like » | Twitter n'a pas encore propagé le like | Le script attend 15 s puis réessaie (3 fois, 25 s entre chaque). Augmenter `-ConfirmDelay` si ça arrive souvent |
 | « Bouton Like introuvable dans le popup X » | Tweet supprimé / page non chargée | Le script passe au tweet suivant (`Skip`) |
 | « Aucun bouton Like visible » | Mauvaise page ou plus de tweets | Vérifier `favtweets.php` ; recharger la page |
 | « La page … n'est pas apparue » | Chrome déjà ouvert sur un autre profil | Ouvrir manuellement la page dans le profil « Livre », puis relancer |

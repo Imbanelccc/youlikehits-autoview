@@ -14,7 +14,7 @@ echo   (annuler : shutdown /a dans une invite de commandes)
 echo ============================================================
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0ylh-autolike.ps1" -Cycles 30 -MaxWait 45 -EteindreOrdinateur
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0ylh-autolike.ps1" -Cycles 30 -MaxWait 120 -ConfirmDelay 15 -EteindreOrdinateur
 
 echo.
 echo Termine. Journal : %~dp0ylh-autolike.log
